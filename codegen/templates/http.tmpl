@@ -1,0 +1,30 @@
+// http
+
+type HTTPRequest struct {
+	Method  string            `json:"method"`
+	URL     string            `json:"url"`
+	Headers map[string]string `json:"headers,omitempty"`
+	Body    string            `json:"body,omitempty"`
+}
+
+type HTTPResponse struct {
+	Status  int               `json:"status"`
+	Headers map[string]string `json:"headers,omitempty"`
+	Body    string            `json:"body,omitempty"`
+}
+
+func HTTP(in HTTPRequest) (HTTPResponse, error) {
+	var out HTTPResponse
+	args, err := json.Marshal(in)
+	if err != nil {
+		return out, err
+	}
+	res, env := capInvoke("http", args)
+	if env != nil {
+		return out, env
+	}
+	if err := json.Unmarshal(res, &out); err != nil {
+		return out, err
+	}
+	return out, nil
+}

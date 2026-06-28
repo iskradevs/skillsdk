@@ -1,0 +1,25 @@
+// random
+
+type RandomArgs struct {
+	N int `json:"n"`
+}
+
+type RandomResult struct {
+	Hex string `json:"hex"`
+}
+
+func Random(n int) (string, error) {
+	args, err := json.Marshal(RandomArgs{N: n})
+	if err != nil {
+		return "", err
+	}
+	res, env := capInvoke("random", args)
+	if env != nil {
+		return "", env
+	}
+	var out RandomResult
+	if err := json.Unmarshal(res, &out); err != nil {
+		return "", err
+	}
+	return out.Hex, nil
+}

@@ -1,0 +1,63 @@
+// show_view
+
+// ShowViewComponent is one component of a declarative view (A4). The discriminator
+// is Type; the relevant fields depend on the type. Populate only the fields
+// relevant to Type — the server keeps a normalized copy with cross-type fields
+// stripped. Whitelist is strict server-side: an unknown Type is rejected by
+// validateViewSpec. The wire contract mirrors capbackend: the list uses key
+// list_items (NOT items, which is keyvalue's typed field).
+//
+// Component types: text, table, keyvalue, list, badge, divider.
+// Badge tones: info, warn, ok, error.
+type ShowViewComponent struct {
+	Type string `json:"type"`
+	// text
+	Value string `json:"value,omitempty"`
+	// table
+	Columns []string   `json:"columns,omitempty"`
+	Rows    [][]string `json:"rows,omitempty"`
+	// keyvalue
+	Items []ShowViewKV `json:"items,omitempty"`
+	// list
+	ListItems []string `json:"list_items,omitempty"`
+	Ordered   bool     `json:"ordered,omitempty"`
+	// badge
+	Text string `json:"text,omitempty"`
+	Tone string `json:"tone,omitempty"`
+}
+
+// ShowViewKV is one key/value pair of a keyvalue component.
+type ShowViewKV struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// ShowViewSpec is the root of a declarative view: an ordered list of components.
+type ShowViewSpec struct {
+	Components []ShowViewComponent `json:"components"`
+}
+
+type showViewAck struct {
+	Accepted bool `json:"accepted"`
+}
+
+// ShowView renders a declarative view to the user (one-way, A4). The spec is the
+// view contract {components:[...]}. accepted=false is a best-effort delivery hint
+// (no addressee or dropped) — do NOT branch business logic on it: the same
+// situation yields different values across deployments. The view is best-effort
+// and may be dropped anywhere.
+func ShowView(spec ShowViewSpec) (accepted bool, err error) {
+	args, merr := json.Marshal(spec)
+	if merr != nil {
+		return false, merr
+	}
+	res, env := capInvoke("show_view", args)
+	if env != nil {
+		return false, env
+	}
+	var ack showViewAck
+	if uerr := json.Unmarshal(res, &ack); uerr != nil {
+		return false, uerr
+	}
+	return ack.Accepted, nil
+}

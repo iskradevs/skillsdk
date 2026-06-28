@@ -1,0 +1,41 @@
+// kb
+
+type KBChunk struct {
+	ChunkID        string  `json:"chunk_id"`
+	DocumentID     string  `json:"document_id"`
+	DocumentName   string  `json:"document_name"`
+	CollectionID   string  `json:"collection_id"`
+	MimeType       string  `json:"mime_type"`
+	Content        string  `json:"content"`
+	Score          float64 `json:"score"`
+	SectionContext string  `json:"section_context,omitempty"`
+}
+
+type KBResult struct {
+	Results    []KBChunk `json:"results"`
+	TotalFound int       `json:"total_found"`
+}
+
+type kbSearchArgs struct {
+	Op    string `json:"op"`
+	Query string `json:"query"`
+	Limit int    `json:"limit,omitempty"`
+}
+
+// KB searches the knowledge base accessible to the caller. limit is capped
+// server-side (0 = server default).
+func KB(query string, limit int) (KBResult, error) {
+	var out KBResult
+	args, err := json.Marshal(kbSearchArgs{Op: "search", Query: query, Limit: limit})
+	if err != nil {
+		return out, err
+	}
+	res, env := capInvoke("kb", args)
+	if env != nil {
+		return out, env
+	}
+	if err := json.Unmarshal(res, &out); err != nil {
+		return out, err
+	}
+	return out, nil
+}

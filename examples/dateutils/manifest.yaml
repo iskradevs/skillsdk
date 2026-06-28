@@ -1,0 +1,49 @@
+schema_version: 1
+bundle: dateutils
+version: "1.0.0"
+author: "Iskra <ops@iskra>"
+description: "Даты: разница, сдвиг, рабочие дни (производственный календарь РФ)"
+license: "Apache-2.0"
+source:
+  language: go-tinygo
+  toolchain: tinygo-0.41.1
+runtime:
+  kind: wasm-per-call
+  quotas:
+    timeout_s: 30
+    memory_mb: 128
+    cpu_ms: 5000
+tools:
+  - id: date_diff
+    description: "Разница в днях между двумя датами (YYYY-MM-DD)"
+    input_schema:
+      type: object
+      properties:
+        from: { type: string, description: "дата YYYY-MM-DD" }
+        to:   { type: string, description: "дата YYYY-MM-DD" }
+      required: ["from", "to"]
+    capabilities_required:
+      - name: now
+  - id: date_add
+    description: "Прибавить N дней к дате (по умолчанию — к сегодня)"
+    input_schema:
+      type: object
+      properties:
+        date: { type: string, description: "дата YYYY-MM-DD; пусто = сегодня" }
+        days: { type: integer, description: "сколько дней прибавить (можно отрицательное)" }
+      required: ["days"]
+    capabilities_required:
+      - name: now
+  - id: working_days
+    description: "Рабочие/выходные/праздничные дни в диапазоне (производственный календарь РФ)"
+    input_schema:
+      type: object
+      properties:
+        from: { type: string, description: "дата YYYY-MM-DD" }
+        to:   { type: string, description: "дата YYYY-MM-DD" }
+      required: ["from", "to"]
+    capabilities_required:
+      - name: http
+        config:
+          allow_hosts: ["isdayoff.ru"]
+      - name: now

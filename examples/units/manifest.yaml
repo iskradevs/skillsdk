@@ -1,0 +1,26 @@
+schema_version: 1
+bundle: units
+version: "1.0.0"
+author: "Iskra <ops@iskra>"
+description: "Конвертер единиц измерения (длина, масса, температура, объём и др.)"
+license: "Apache-2.0"
+source:
+  language: go-tinygo
+  toolchain: tinygo-0.41.1
+runtime:
+  kind: wasm-per-call
+  quotas:
+    timeout_s: 30
+    memory_mb: 128
+    cpu_ms: 5000
+tools:
+  - id: unit_convert
+    description: "Перевести величину из одной единицы в другую (категория определяется автоматически)"
+    input_schema:
+      type: object
+      properties:
+        value: { type: number, description: "число для конвертации" }
+        from:  { type: string, description: "исходная единица, напр. km, kg, c, gal" }
+        to:    { type: string, description: "целевая единица" }
+      required: ["value", "from", "to"]
+    capabilities_required: []

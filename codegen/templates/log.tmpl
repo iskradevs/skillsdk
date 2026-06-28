@@ -1,0 +1,18 @@
+// log
+
+type LogArgs struct {
+	Level   string `json:"level"`
+	Message string `json:"message"`
+}
+
+func Log(level, message string) error {
+	args, err := json.Marshal(LogArgs{Level: level, Message: message})
+	if err != nil {
+		return err
+	}
+	_, env := capInvoke("log", args)
+	if env != nil {
+		return env
+	}
+	return nil
+}

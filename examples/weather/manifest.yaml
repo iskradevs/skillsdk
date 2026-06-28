@@ -1,0 +1,39 @@
+schema_version: 1
+bundle: weather
+version: "1.0.0"
+author: "Iskra <ops@iskra>"
+description: "Погода: текущая и прогноз по названию города (open-meteo)"
+license: "Apache-2.0"
+source:
+  language: go-tinygo
+  toolchain: tinygo-0.41.1
+runtime:
+  kind: wasm-per-call
+  quotas:
+    timeout_s: 30
+    memory_mb: 128
+    cpu_ms: 5000
+tools:
+  - id: weather_current
+    description: "Текущая погода в городе"
+    input_schema:
+      type: object
+      properties:
+        location: { type: string, description: "название города" }
+      required: ["location"]
+    capabilities_required:
+      - name: http
+        config:
+          allow_hosts: ["geocoding-api.open-meteo.com", "api.open-meteo.com"]
+  - id: weather_forecast
+    description: "Прогноз погоды на N дней (1–7)"
+    input_schema:
+      type: object
+      properties:
+        location: { type: string, description: "название города" }
+        days:     { type: integer, description: "число дней 1–7 (по умолчанию 3)" }
+      required: ["location"]
+    capabilities_required:
+      - name: http
+        config:
+          allow_hosts: ["geocoding-api.open-meteo.com", "api.open-meteo.com"]

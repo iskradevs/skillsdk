@@ -1,0 +1,35 @@
+// progress
+
+type progressArgs struct {
+	Progress float64 `json:"progress"`
+	Total    float64 `json:"total,omitempty"`
+	Message  string  `json:"message,omitempty"`
+}
+
+type progressAck struct {
+	Accepted bool `json:"accepted"`
+}
+
+// Progress reports one-way execution progress (ADR-082). total <= 0 omits the
+// total. accepted=false is a backpressure hint (the event was dropped by
+// throttling or had no addressee) — do NOT branch business logic on it: the
+// same situation yields different values across deployments (a no-op sink
+// always accepts). Events are best-effort and may be dropped anywhere.
+func Progress(progress, total float64, message string) (accepted bool, err error) {
+	if total < 0 {
+		total = 0
+	}
+	args, merr := json.Marshal(progressArgs{Progress: progress, Total: total, Message: message})
+	if merr != nil {
+		return false, merr
+	}
+	res, env := capInvoke("progress", args)
+	if env != nil {
+		return false, env
+	}
+	var ack progressAck
+	if uerr := json.Unmarshal(res, &ack); uerr != nil {
+		return false, uerr
+	}
+	return ack.Accepted, nil
+}

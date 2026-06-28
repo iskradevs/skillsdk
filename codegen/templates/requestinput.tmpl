@@ -1,0 +1,102 @@
+// request_input
+
+// RequestInputComponent mirrors ShowViewComponent (optional display block of a
+// form). See showview.tmpl for the field semantics; the wire contract is shared
+// with capbackend (list uses list_items, not items).
+type RequestInputComponent struct {
+	Type      string           `json:"type"`
+	Value     string           `json:"value,omitempty"`
+	Columns   []string         `json:"columns,omitempty"`
+	Rows      [][]string       `json:"rows,omitempty"`
+	Items     []RequestInputKV `json:"items,omitempty"`
+	ListItems []string         `json:"list_items,omitempty"`
+	Ordered   bool             `json:"ordered,omitempty"`
+	Text      string           `json:"text,omitempty"`
+	Tone      string           `json:"tone,omitempty"`
+}
+
+// RequestInputKV is one key/value pair of a keyvalue component. Defined locally
+// (NOT reused from showview.tmpl) so a request_input-only skill compiles even
+// when the show_view template is not included (Review C4).
+type RequestInputKV struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// RequestInputValidate holds declarative validation rules for one input field.
+// Mirrors inputValidate in capbackend/formspec.go and SkillFormValidate in
+// web/src/lib/types/AgentTimeline.ts.
+type RequestInputValidate struct {
+	MinLength *int     `json:"min_length,omitempty"`
+	MaxLength *int     `json:"max_length,omitempty"`
+	Min       *float64 `json:"min,omitempty"`
+	Max       *float64 `json:"max,omitempty"`
+	Pattern   string   `json:"pattern,omitempty"`
+}
+
+// RequestInputPredicate is a declarative condition (γ). A leaf {field,op,value} OR a
+// combinator all/any/not — exactly one. Mirrors predicate in capbackend/formspec.go.
+// Predicate operators: eq, neq, in, not_in, gt, gte, lt, lte, empty, not_empty.
+type RequestInputPredicate struct {
+	Field string          `json:"field,omitempty"`
+	Op    string          `json:"op,omitempty"`
+	Value json.RawMessage `json:"value,omitempty"`
+	All   []RequestInputPredicate `json:"all,omitempty"`
+	Any   []RequestInputPredicate `json:"any,omitempty"`
+	Not   *RequestInputPredicate  `json:"not,omitempty"`
+}
+
+// RequestInputStep is wizard step metadata (title). Mirrors formStep in formspec.go.
+type RequestInputStep struct {
+	Title string `json:"title"`
+}
+
+// RequestInputField is one input control. Options is required for
+// select/multiselect/radio_group.
+// Input field types: text, textarea, select, multiselect, confirm, number, integer, checkbox, date, datetime, radio_group, number_range.
+type RequestInputField struct {
+	Name         string                 `json:"name"`
+	Type         string                 `json:"type"` // text,textarea,select,multiselect,confirm,number,integer,checkbox,date,datetime,radio_group,number_range
+	Label        string                 `json:"label"`
+	Required     bool                   `json:"required,omitempty"`
+	Options      []string               `json:"options,omitempty"`
+	Validate     *RequestInputValidate  `json:"validate,omitempty"`
+	Step         *int                   `json:"step,omitempty"`          // wizard step index (0-based)
+	Group        string                 `json:"group,omitempty"`         // sub-section label within a step
+	ShowWhen     *RequestInputPredicate `json:"show_when,omitempty"`     // conditional visibility
+	RequiredWhen *RequestInputPredicate `json:"required_when,omitempty"` // conditional required
+}
+
+// RequestInputSpec is the form contract: an optional display block plus the
+// input fields the user must fill.
+type RequestInputSpec struct {
+	Components []RequestInputComponent `json:"components,omitempty"`
+	Steps      []RequestInputStep      `json:"steps,omitempty"`
+	Inputs     []RequestInputField     `json:"inputs"`
+}
+
+type requestInputAnswer struct {
+	Values map[string]json.RawMessage `json:"values"`
+}
+
+// RequestInput pauses the skill, asks the user to fill the form, and blocks
+// until the user answers (round-trip, A4 Phase 2). It returns the per-field
+// values; unmarshal each json.RawMessage into the expected type (string for
+// text/textarea/select, []string for multiselect, bool for confirm). An error
+// is returned if the user does not answer in time (input_timeout) or the wait is
+// aborted. The host enforces the form/answer schema; values are pre-validated.
+func RequestInput(spec RequestInputSpec) (values map[string]json.RawMessage, err error) {
+	args, merr := json.Marshal(spec)
+	if merr != nil {
+		return nil, merr
+	}
+	res, env := capInvoke("request_input", args)
+	if env != nil {
+		return nil, env
+	}
+	var ans requestInputAnswer
+	if uerr := json.Unmarshal(res, &ans); uerr != nil {
+		return nil, uerr
+	}
+	return ans.Values, nil
+}

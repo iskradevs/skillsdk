@@ -1,0 +1,17 @@
+// now
+
+type NowResult struct {
+	UnixNano int64 `json:"unix_nano"`
+}
+
+func Now() (int64, error) {
+	res, env := capInvoke("now", []byte(`{}`))
+	if env != nil {
+		return 0, env
+	}
+	var out NowResult
+	if err := json.Unmarshal(res, &out); err != nil {
+		return 0, err
+	}
+	return out.UnixNano, nil
+}

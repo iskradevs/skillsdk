@@ -1,0 +1,30 @@
+// llm
+
+type LLMMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type LLMRequest struct {
+	Messages []LLMMessage `json:"messages"`
+}
+
+type LLMResponse struct {
+	Completion string `json:"completion"`
+}
+
+func LLM(in LLMRequest) (LLMResponse, error) {
+	var out LLMResponse
+	args, err := json.Marshal(in)
+	if err != nil {
+		return out, err
+	}
+	res, env := capInvoke("llm", args)
+	if env != nil {
+		return out, env
+	}
+	if err := json.Unmarshal(res, &out); err != nil {
+		return out, err
+	}
+	return out, nil
+}

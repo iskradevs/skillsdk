@@ -1,0 +1,67 @@
+// files
+
+type FileDocument struct {
+	DocumentID   string `json:"document_id"`
+	Name         string `json:"name"`
+	MimeType     string `json:"mime_type"`
+	CollectionID string `json:"collection_id"`
+	Content      string `json:"content"`
+	Truncated    bool   `json:"truncated"`
+}
+
+type FileDocumentMeta struct {
+	DocumentID   string   `json:"document_id"`
+	Name         string   `json:"name"`
+	MimeType     string   `json:"mime_type"`
+	CollectionID string   `json:"collection_id"`
+	Tags         []string `json:"tags,omitempty"`
+	ChunkCount   int      `json:"chunk_count"`
+}
+
+type fileReadArgs struct {
+	Op         string `json:"op"`
+	DocumentID string `json:"document_id"`
+}
+
+type fileListArgs struct {
+	Op           string `json:"op"`
+	CollectionID string `json:"collection_id,omitempty"`
+}
+
+type fileListResult struct {
+	Documents []FileDocumentMeta `json:"documents"`
+}
+
+// FileRead returns the full text of an accessible KB document.
+func FileRead(documentID string) (FileDocument, error) {
+	var out FileDocument
+	args, err := json.Marshal(fileReadArgs{Op: "read", DocumentID: documentID})
+	if err != nil {
+		return out, err
+	}
+	res, env := capInvoke("files", args)
+	if env != nil {
+		return out, env
+	}
+	if err := json.Unmarshal(res, &out); err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
+// FileList lists accessible KB documents (collectionID="" = all accessible).
+func FileList(collectionID string) ([]FileDocumentMeta, error) {
+	args, err := json.Marshal(fileListArgs{Op: "list", CollectionID: collectionID})
+	if err != nil {
+		return nil, err
+	}
+	res, env := capInvoke("files", args)
+	if env != nil {
+		return nil, env
+	}
+	var out fileListResult
+	if err := json.Unmarshal(res, &out); err != nil {
+		return nil, err
+	}
+	return out.Documents, nil
+}
